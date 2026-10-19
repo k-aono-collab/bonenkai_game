@@ -312,12 +312,13 @@
   // 設定 & 状態管理
   // ==============================
   //const GAS_ENDPOINT_URL = "https://script.google.com/a/macros/sunpoh-hd.co.jp/s/AKfycbz2y6uwbPcqSyxJ5HLl7Os5yndM0Da1XVPCYO_SxPm7Hkh-VTra5x0P86uR5mqIqR4H/exec"; 
-  const GAS_ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbyR7TqgTR48BP8oAE4W6A8xySn3-FOnvyJUE8kk3eWJeA90kNft3b4lVvam7zcuNKtH/exec"; 
+  const GAS_ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbyR7TqgTR48BP8oAE4W6A8xySn3-FOnvyJUE8kk3eWJeA90kNft3b4lVvam7zcuNKtH/exec";
   
   let playerName = "";
   let startTime = 0;
   let timerInterval = null;
   let elapsedSeconds = 0;
+  let hasSubmitted = false; // 2重送信防止フラグ
 
   // ==============================
   // タイマー関連
@@ -402,6 +403,10 @@
   }
 
   function finishGame() {
+    // 既に送信済みの場合は何もしない（多重実行ガード）
+    if (hasSubmitted) return;
+    hasSubmitted = true;
+
     stopTimer();
     document.getElementById('mainHeader').style.display = 'none';
     showScreen('screen-clear', null);
@@ -409,16 +414,13 @@
     document.getElementById('clearPlayerName').innerText = `${playerName} 選手`;
     document.getElementById('finalTimeDisplay').innerText = `${elapsedSeconds} 秒`;
 
-    // 先ほどブラウザ直打ちで成功したURLパラメータ方式で確実に送信
+    // 1回だけ確実に送信（通信の重複を解消）
     if (GAS_ENDPOINT_URL) {
       const sendUrl = `${GAS_ENDPOINT_URL}?name=${encodeURIComponent(playerName)}&time=${encodeURIComponent(elapsedSeconds)}&t=${Date.now()}`;
       
-      // ブラウザ制限を受けない画像ビーコン通信
+      // 画像ビーコン方式（1回のみ送信）
       const beacon = new Image();
       beacon.src = sendUrl;
-      
-      // バックアップとしてfetchも並行実行
-      fetch(sendUrl, { mode: 'no-cors' }).catch(() => {});
     }
   }
 
